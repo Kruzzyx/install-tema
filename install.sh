@@ -22,7 +22,7 @@ prompt_yn() {
 }
 
 [ "$EUID" -ne 0 ] && { echo -e "${RED}Jalankan sebagai root (sudo su)${NC}"; exit 1; }
-[ -d "$PANEL_DIR" ] || { echo -e "${RED}[!] Panel tidak ditemukan di $PANEL_DIR${NC}"; exit 1; }
+[ -d "$PANEL_DIR" ] \vert{}\vert{} { echo -e "${RED}[!] Panel tidak ditemukan di $PANEL_DIR${NC}"; exit 1; }
 
 # Bersihkan --openssl-legacy-provider dari NODE_OPTIONS agar tidak error di Node modern
 if [[ "${NODE_OPTIONS:-}" == *"--openssl-legacy-provider"* ]]; then
@@ -50,13 +50,15 @@ fi
 install_node_22_and_yarn() {
     echo -e "${YELLOW}[+] Mempersiapkan Node.js v22.x & Yarn...${NC}"
     apt-get update -y && apt-get install -y curl ca-certificates gnupg || return 1
+    rm -f /etc/apt/sources.list.d/nodesource* /etc/apt/keyrings/nodesource*
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - || return 1
-    apt-get install -y nodejs || return 1
+    apt-get install -y --allow-downgrades nodejs || return 1
 
     if ! command -v yarn &>/dev/null; then
         npm install -g yarn || return 1
     fi
 
+    hash -r
     echo -e "${GREEN}[✓] Node versi aktif: $(node -v 2>/dev/null)${NC}"
     return 0
 }
@@ -65,8 +67,8 @@ ensure_node_22() {
     local cur_major
     cur_major=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')
 
-    if [ -z "$cur_major" ] || [ "$cur_major" -lt 22 ]; then
-        echo -e "${RED}[!] Node.js saat ini: $(node -v 2>/dev/null || echo 'belum terinstall'). Blueprint membutuhkan Node.js v22.x+.${NC}"
+    if [ -z "$cur_major" ] \vert{}\vert{} [ "$cur_major" -lt 22 ]; then
+        echo -e "${RED}[!] Node.js saat ini:$(node -v 2>/dev/null || echo 'belum terinstall'). Blueprint membutuhkan Node.js v22.x+.${NC}"
         if prompt_yn "Install/upgrade Node.js ke v22.x dan pastikan Yarn terinstall sekarang? [y/N]: "; then
             install_node_22_and_yarn || return 1
         else
@@ -116,7 +118,7 @@ install_blueprint_auto() {
         return 1
     }
 
-    cd "$PANEL_DIR" || { rm -rf "$TMP_BP"; return 1; }
+    cd "$PANEL_DIR" \vert{}\vert{} { rm -rf "$TMP_BP"; return 1; }
 
     if [ -f "$TMP_BP/blueprint.sh" ]; then
         echo -e "${YELLOW}[+] Menjalankan installer Blueprint...${NC}"
@@ -156,7 +158,7 @@ else
 fi
 
 # Cek dependensi frontend panel (webpack & react / node_modules)
-if [ -f "$PANEL_DIR/package.json" ] && { [ ! -d "$PANEL_DIR/node_modules/webpack" ] || [ ! -d "$PANEL_DIR/node_modules/react" ]; }; then
+if [ -f "$PANEL_DIR/package.json" ] && { [ ! -d "$PANEL_DIR/node_modules/webpack" ] \vert{}\vert{} [ ! -d "$PANEL_DIR/node_modules/react" ]; }; then
     echo -e "${RED}[!] Dependensi panel (webpack/react) belum lengkap di $PANEL_DIR.${NC}"
     if prompt_yn "Jalankan 'yarn install' di '$PANEL_DIR' sekarang? [y/N]: "; then
         (cd "$PANEL_DIR" && yarn install) || {
@@ -200,14 +202,15 @@ LOCK_FILES=$(find "$PANEL_DIR" -maxdepth 2 \( -name "*lock*" -o -name ".blueprin
 if [ -n "$LOCK_FILES" ]; then
     echo -e "${YELLOW}[!] Ditemukan file lock/state di $PANEL_DIR:${NC}"
     echo "$LOCK_FILES"
-    if prompt_yn "Hapus file lock tersebut jika tidak sedang dipakai? [y/N]: "; then
+    if prompt_yn "Jalankan 'blueprint -unlock' dan bersihkan lockfile sisa? [y/N]: "; then
+        blueprint -unlock 2>/dev/null || true
         while IFS= read -r lf; do
             if [ -n "$lf" ] && [ -f "$lf" ]; then
                 rm -f "$lf" && echo -e "${GREEN}[-] Dihapus: $lf${NC}"
             fi
         done <<< "$LOCK_FILES"
     else
-        echo -e "${YELLOW}Melewati penghapusan lockfile.${NC}"
+        echo -e "${YELLOW}Melewati pembersihan lockfile.${NC}"
     fi
 fi
 
@@ -374,63 +377,4 @@ a { color: var(--neu-accent); }
 }
 .skin-blue .sidebar-menu > li > a { color: var(--neu-muted); border: 0; }
 .skin-blue .sidebar-menu > li.active > a,
-.skin-blue .sidebar-menu > li:hover > a {
-  background: var(--neu-bg) !important;
-  color: var(--neu-accent) !important;
-  box-shadow: var(--neu-inset);
-  border-radius: 12px;
-}
-.skin-blue .sidebar-menu > li.header { background: transparent; color: var(--neu-muted); }
-
-.box, .info-box, .small-box, .nav-tabs-custom, .modal-content {
-  background: var(--neu-bg) !important;
-  border: 0 !important;
-  border-radius: var(--neu-radius);
-  box-shadow: var(--neu-raised);
-  color: var(--neu-text);
-}
-.box-header, .box-footer, .modal-header, .modal-footer {
-  background: transparent !important;
-  border-color: var(--neu-dark) !important;
-}
-.box.box-primary, .box.box-info, .box.box-danger, .box.box-warning, .box.box-success { border-top: 0 !important; }
-
-.table > thead > tr > th,
-.table > tbody > tr > td { border-color: var(--neu-dark) !important; color: var(--neu-text); }
-.table-hover > tbody > tr:hover, .table-striped > tbody > tr:nth-of-type(odd) { background: var(--neu-light) !important; }
-
-.form-control, select.form-control, textarea.form-control, .input-group-addon, .select2-selection {
-  background: var(--neu-bg) !important;
-  color: var(--neu-text) !important;
-  border: 0 !important;
-  border-radius: 12px !important;
-  box-shadow: var(--neu-inset) !important;
-}
-.form-control:focus { outline: 2px solid var(--neu-accent); outline-offset: 2px; }
-
-.btn {
-  border: 0 !important;
-  border-radius: 12px !important;
-  box-shadow: var(--neu-raised-sm);
-  transition: box-shadow .15s ease;
-}
-.btn:active, .btn.active { box-shadow: var(--neu-inset) !important; }
-.btn-default { background: var(--neu-bg); color: var(--neu-text); }
-
-.nav-tabs-custom > .nav-tabs > li.active > a { background: var(--neu-bg); color: var(--neu-accent); }
-.callout { border-radius: var(--neu-radius); border: 0 !important; box-shadow: var(--neu-raised-sm); }
-
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-EOF_ADMIN_CSS
-
-echo -e "${YELLOW}[+] Membuat paket ekstensi...${NC}"
-(cd "$WORK" && zip -qr "$PANEL_DIR/$EXT_ID.blueprint" conf.yml view.blade.php dashboard.css admin.css) \
-    || { echo -e "${RED}[!] Gagal membuat paket.${NC}"; exit 1; }
-
-echo -e "${YELLOW}[+] Menginstall via Blueprint...${NC}"
-if blueprint -install "$EXT_ID"; then
-    echo -e "${GREEN}[✓] Neumorphism terinstall. Hard refresh browser (Ctrl+Shift+R).${NC}"
-else
-    echo -e "${RED}[!] Install gagal. Cek pesan error di atas.${NC}"
-fi
-rm -f "$PANEL_DIR/$EXT_ID.blueprint"
+.skin-blue .sidebar-menu >
