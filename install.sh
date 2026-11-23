@@ -1,7 +1,7 @@
 #!/bin/bash
 # Neumorphism Theme Installer (Blueprint extension)
-# Pakai:  bash install-neumorphism.sh            -> install (auto-install Blueprint jika minta konfirmasi)
-#         bash install-neumorphism.sh --remove   -> uninstall
+# Pakai:  bash install.sh            -> install (auto-install Blueprint & deps dengan konfirmasi)
+#         bash install.sh --remove   -> uninstall
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 PANEL_DIR="${PANEL_DIR:-/var/www/pterodactyl}"
@@ -10,7 +10,13 @@ EXT_ID="neumorphism"
 [ "$EUID" -ne 0 ] && { echo -e "${RED}Jalankan sebagai root (sudo su)${NC}"; exit 1; }
 [ -d "$PANEL_DIR" ] || { echo -e "${RED}[!] Panel tidak ditemukan di $PANEL_DIR${NC}"; exit 1; }
 
-unset NODE_OPTIONS
+# Bersihkan --openssl-legacy-provider dari NODE_OPTIONS agar tidak error di Node modern
+if [[ "${NODE_OPTIONS:-}" == *"--openssl-legacy-provider"* ]]; then
+    export NODE_OPTIONS="${NODE_OPTIONS//--openssl-legacy-provider/}"
+    export NODE_OPTIONS="$(echo "$NODE_OPTIONS" | xargs)"
+    [ -z "$NODE_OPTIONS" ] && unset NODE_OPTIONS
+fi
+
 cd "$PANEL_DIR" || exit 1
 
 if [ "$1" == "--remove" ]; then
@@ -31,20 +37,58 @@ if [ "$1" == "--remove" ]; then
     exit
 fi
 
+install_node_22_and_yarn() {
+    echo -e "${YELLOW}[+] Mempersiapkan Node.js v22.x & Yarn...${NC}"
+    apt-get update -y && apt-get install -y curl ca-certificates gnupg || return 1
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - || return 1
+    apt-get install -y nodejs || return 1
+
+    if ! command -v yarn &>/dev/null; then
+        npm install -g yarn || return 1
+    fi
+
+    echo -e "${GREEN}[✓] Node versi aktif: $(node -v 2>/dev/null)${NC}"
+    return 0
+}
+
+ensure_node_22() {
+    local cur_major
+    cur_major=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')
+
+    if [ -z "$cur_major" ] || [ "$cur_major" -lt 22 ]; then
+        echo -e "${RED}[!] Node.js saat ini: $(node -v 2>/dev/null || echo 'belum terinstall'). Blueprint membutuhkan Node.js v22.x+.${NC}"
+        read -rp "Install/upgrade Node.js ke v22.x dan pastikan Yarn terinstall sekarang? [y/N]: " NODE_ANS
+        case "$NODE_ANS" in
+            [yY]|[yY][eE][sS])
+                install_node_22_and_yarn || return 1
+                ;;
+            *)
+                echo -e "${YELLOW}Instalasi dibatalkan karena Node.js belum memenuhi syarat (>= v22.x).${NC}"
+                return 1
+                ;;
+        esac
+    else
+        if ! command -v yarn &>/dev/null; then
+            read -rp "Yarn belum terinstall. Install Yarn global via npm sekarang? [y/N]: " YARN_ANS
+            case "$YARN_ANS" in
+                [yY]|[yY][eE][sS])
+                    npm install -g yarn || return 1
+                    ;;
+                *)
+                    echo -e "${RED}[!] Yarn dibutuhkan oleh Blueprint.${NC}"
+                    return 1
+                    ;;
+            esac
+        fi
+    fi
+    return 0
+}
+
 install_blueprint_auto() {
     echo -e "${YELLOW}[+] Mempersiapkan instalasi Blueprint...${NC}"
     apt-get update -y && apt-get install -y curl unzip git gnupg ca-certificates || return 1
 
-    if ! command -v node &>/dev/null; then
-        echo -e "${YELLOW}[+] Menginstall Node.js (LTS)...${NC}"
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || return 1
-        apt-get install -y nodejs || return 1
-    fi
-
-    if ! command -v yarn &>/dev/null; then
-        echo -e "${YELLOW}[+] Menginstall Yarn...${NC}"
-        npm install -g yarn || return 1
-    fi
+    ensure_node_22 || return 1
 
     echo -e "${YELLOW}[+] Mengambil informasi rilis terbaru Blueprint...${NC}"
     LATEST_URL=$(curl -fsSL https://api.github.com/repos/BlueprintFramework/framework/releases/latest \
@@ -98,7 +142,7 @@ install_blueprint_auto() {
 
 if ! command -v blueprint &>/dev/null; then
     echo -e "${RED}[!] Blueprint belum terinstall.${NC}"
-    echo -e "${YELLOW}Auto-install akan mengunduh paket dari GitHub, menginstall dependensi (curl, unzip, git, Node.js, Yarn), dan memodifikasi folder panel di $PANEL_DIR.${NC}"
+    echo -e "${YELLOW}Auto-install akan mengunduh paket dari GitHub, menginstall dependensi (Node.js v22.x, Yarn, curl, unzip, git), dan memodifikasi folder panel di $PANEL_DIR.${NC}"
     read -rp "Lanjutkan auto-install Blueprint sekarang? [y/N]: " BP_ANS
     case "$BP_ANS" in
         [yY]|[yY][eE][sS])
@@ -106,6 +150,27 @@ if ! command -v blueprint &>/dev/null; then
             ;;
         *)
             echo -e "${YELLOW}Install Blueprint secara manual: https://blueprint.zip/guides/admin/install${NC}"
+            exit 1
+            ;;
+    esac
+else
+    # Blueprint sudah ada, tetap pastikan Node >= 22 dan yarn siap
+    ensure_node_22 || exit 1
+fi
+
+# Cek dependensi frontend panel (webpack & react / node_modules)
+if [ -f "$PANEL_DIR/package.json" ] && { [ ! -d "$PANEL_DIR/node_modules/webpack" ] || [ ! -d "$PANEL_DIR/node_modules/react" ]; }; then
+    echo -e "${RED}[!] Dependensi panel (webpack/react) belum lengkap di $PANEL_DIR.${NC}"
+    read -rp "Jalankan 'yarn install' di '$PANEL_DIR' sekarang? [y/N]: " YI_ANS
+    case "$YI_ANS" in
+        [yY]|[yY][eE][sS])
+            (cd "$PANEL_DIR" && yarn install) || {
+                echo -e "${RED}[!] 'yarn install' gagal.${NC}"
+                exit 1
+            }
+            ;;
+        *)
+            echo -e "${YELLOW}Instalasi dibatalkan karena dependensi panel (webpack/react) belum terinstall.${NC}"
             exit 1
             ;;
     esac
@@ -136,7 +201,7 @@ esac
 
 # Deteksi versi Blueprint untuk field "target"
 BP_VER=$(blueprint -v 2>/dev/null | grep -oE '(beta|alpha)-[0-9]{4}-[0-9]{2}' | head -n 1)
-BP_VER="${BP_VER:-beta-2026-06}"
+BP_VER="${BP_VER:-beta-2026-08}"
 echo -e "${YELLOW}[+] Versi Blueprint terdeteksi: $BP_VER${NC}"
 
 WORK=$(mktemp -d)
