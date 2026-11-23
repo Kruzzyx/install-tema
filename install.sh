@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-
 cd /var/www/pterodactyl
 unset NODE_OPTIONS
 
