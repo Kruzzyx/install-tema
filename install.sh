@@ -3,7 +3,11 @@
 # Pakai:  bash install.sh            -> install (auto-install Blueprint & deps dengan konfirmasi)
 #         bash install.sh --remove   -> uninstall
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
 PANEL_DIR="${PANEL_DIR:-/var/www/pterodactyl}"
 EXT_ID="neumorphism"
 
@@ -21,30 +25,45 @@ prompt_yn() {
     esac
 }
 
-[ "$EUID" -ne 0 ] && { echo -e "${RED}Jalankan sebagai root (sudo su)${NC}"; exit 1; }
-[ -d "$PANEL_DIR" ] \vert{}\vert{} { echo -e "${RED}[!] Panel tidak ditemukan di $PANEL_DIR${NC}"; exit 1; }
+if [ "$EUID" -ne 0 ]; then
+    echo -e "${RED}Jalankan sebagai root (sudo su)${NC}"
+    exit 1
+fi
+
+if [ ! -d "$PANEL_DIR" ]; then
+    echo -e "${RED}[!] Panel tidak ditemukan di $PANEL_DIR${NC}"
+    exit 1
+fi
 
 # Bersihkan --openssl-legacy-provider dari NODE_OPTIONS agar tidak error di Node modern
 if [[ "${NODE_OPTIONS:-}" == *"--openssl-legacy-provider"* ]]; then
     export NODE_OPTIONS="${NODE_OPTIONS//--openssl-legacy-provider/}"
     export NODE_OPTIONS="$(echo "$NODE_OPTIONS" | xargs)"
-    [ -z "$NODE_OPTIONS" ] && unset NODE_OPTIONS
+    if [ -z "$NODE_OPTIONS" ]; then
+        unset NODE_OPTIONS
+    fi
 fi
 
-cd "$PANEL_DIR" || exit 1
+if ! cd "$PANEL_DIR"; then
+    echo -e "${RED}[!] Gagal masuk ke direktori $PANEL_DIR${NC}"
+    exit 1
+fi
 
 if [ "$1" == "--remove" ]; then
-    if ! command -v blueprint &>/dev/null; then
+    if ! command -v blueprint >/dev/null 2>&1; then
         echo -e "${RED}[!] Blueprint tidak ditemukan, ekstensi tidak bisa dihapus lewat Blueprint.${NC}"
         exit 1
     fi
     if prompt_yn "Yakin ingin menghapus tema Neumorphism? [y/N]: "; then
-        blueprint -remove "$EXT_ID" && echo -e "${GREEN}[✓] Neumorphism dihapus.${NC}" \
-            || echo -e "${RED}[!] Gagal menghapus.${NC}"
+        if blueprint -remove "$EXT_ID"; then
+            echo -e "${GREEN}[✓] Neumorphism dihapus.${NC}"
+        else
+            echo -e "${RED}[!] Gagal menghapus.${NC}"
+        fi
     else
         echo -e "${YELLOW}Penghapusan dibatalkan.${NC}"
     fi
-    exit
+    exit 0
 fi
 
 install_node_22_and_yarn() {
@@ -54,7 +73,7 @@ install_node_22_and_yarn() {
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - || return 1
     apt-get install -y --allow-downgrades nodejs || return 1
 
-    if ! command -v yarn &>/dev/null; then
+    if ! command -v yarn >/dev/null 2>&1; then
         npm install -g yarn || return 1
     fi
 
@@ -67,8 +86,8 @@ ensure_node_22() {
     local cur_major
     cur_major=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/')
 
-    if [ -z "$cur_major" ] \vert{}\vert{} [ "$cur_major" -lt 22 ]; then
-        echo -e "${RED}[!] Node.js saat ini:$(node -v 2>/dev/null || echo 'belum terinstall'). Blueprint membutuhkan Node.js v22.x+.${NC}"
+    if [ -z "$cur_major" ] || [ "$cur_major" -lt 22 ]; then
+        echo -e "${RED}[!] Node.js saat ini: $(node -v 2>/dev/null || echo 'belum terinstall'). Blueprint membutuhkan Node.js v22.x+.${NC}"
         if prompt_yn "Install/upgrade Node.js ke v22.x dan pastikan Yarn terinstall sekarang? [y/N]: "; then
             install_node_22_and_yarn || return 1
         else
@@ -76,7 +95,7 @@ ensure_node_22() {
             return 1
         fi
     else
-        if ! command -v yarn &>/dev/null; then
+        if ! command -v yarn >/dev/null 2>&1; then
             if prompt_yn "Yarn belum terinstall. Install Yarn global via npm sekarang? [y/N]: "; then
                 npm install -g yarn || return 1
             else
@@ -112,21 +131,24 @@ install_blueprint_auto() {
         return 1
     fi
 
-    unzip -qo "$TMP_BP/release.zip" -d "$TMP_BP" || {
+    if ! unzip -qo "$TMP_BP/release.zip" -d "$TMP_BP"; then
         rm -rf "$TMP_BP"
         echo -e "${RED}[!] Gagal mengekstrak release.zip.${NC}"
         return 1
-    }
+    fi
 
-    cd "$PANEL_DIR" \vert{}\vert{} { rm -rf "$TMP_BP"; return 1; }
+    if ! cd "$PANEL_DIR"; then
+        rm -rf "$TMP_BP"
+        return 1
+    fi
 
     if [ -f "$TMP_BP/blueprint.sh" ]; then
         echo -e "${YELLOW}[+] Menjalankan installer Blueprint...${NC}"
-        bash "$TMP_BP/blueprint.sh" || {
+        if ! bash "$TMP_BP/blueprint.sh"; then
             rm -rf "$TMP_BP"
             echo -e "${RED}[!] Proses installer Blueprint mengalami error.${NC}"
             return 1
-        }
+        fi
     else
         rm -rf "$TMP_BP"
         echo -e "${RED}[!] File blueprint.sh tidak ditemukan di arsip rilis.${NC}"
@@ -135,7 +157,7 @@ install_blueprint_auto() {
 
     rm -rf "$TMP_BP"
 
-    if command -v blueprint &>/dev/null && blueprint -v &>/dev/null; then
+    if command -v blueprint >/dev/null 2>&1 && blueprint -v >/dev/null 2>&1; then
         echo -e "${GREEN}[✓] Blueprint berhasil terinstall.${NC}"
         return 0
     else
@@ -144,7 +166,7 @@ install_blueprint_auto() {
     fi
 }
 
-if ! command -v blueprint &>/dev/null; then
+if ! command -v blueprint >/dev/null 2>&1; then
     echo -e "${RED}[!] Blueprint belum terinstall.${NC}"
     echo -e "${YELLOW}Auto-install akan mengunduh paket dari GitHub, menginstall dependensi (Node.js v22.x, Yarn, curl, unzip, git), dan memodifikasi folder panel di $PANEL_DIR.${NC}"
     if prompt_yn "Lanjutkan auto-install Blueprint sekarang? [y/N]: "; then
@@ -158,20 +180,22 @@ else
 fi
 
 # Cek dependensi frontend panel (webpack & react / node_modules)
-if [ -f "$PANEL_DIR/package.json" ] && { [ ! -d "$PANEL_DIR/node_modules/webpack" ] \vert{}\vert{} [ ! -d "$PANEL_DIR/node_modules/react" ]; }; then
-    echo -e "${RED}[!] Dependensi panel (webpack/react) belum lengkap di $PANEL_DIR.${NC}"
-    if prompt_yn "Jalankan 'yarn install' di '$PANEL_DIR' sekarang? [y/N]: "; then
-        (cd "$PANEL_DIR" && yarn install) || {
-            echo -e "${RED}[!] 'yarn install' gagal.${NC}"
+if [ -f "$PANEL_DIR/package.json" ]; then
+    if [ ! -d "$PANEL_DIR/node_modules/webpack" ] || [ ! -d "$PANEL_DIR/node_modules/react" ]; then
+        echo -e "${RED}[!] Dependensi panel (webpack/react) belum lengkap di $PANEL_DIR.${NC}"
+        if prompt_yn "Jalankan 'yarn install' di '$PANEL_DIR' sekarang? [y/N]: "; then
+            if ! (cd "$PANEL_DIR" && yarn install); then
+                echo -e "${RED}[!] 'yarn install' gagal.${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}Instalasi dibatalkan karena dependensi panel (webpack/react) belum terinstall.${NC}"
             exit 1
-        }
-    else
-        echo -e "${YELLOW}Instalasi dibatalkan karena dependensi panel (webpack/react) belum terinstall.${NC}"
-        exit 1
+        fi
     fi
 fi
 
-if ! command -v zip &>/dev/null; then
+if ! command -v zip >/dev/null 2>&1; then
     if prompt_yn "Paket 'zip' belum terinstall. Install 'zip' sekarang? [y/N]: "; then
         apt-get update -y && apt-get install -y zip || exit 1
     else
@@ -189,7 +213,7 @@ fi
 if pgrep -f "blueprint" >/dev/null 2>&1; then
     echo -e "${RED}[!] Proses 'blueprint' terdeteksi sedang berjalan.${NC}"
     if prompt_yn "Hentikan proses 'blueprint' yang berjalan sekarang? [y/N]: "; then
-        pkill -f "blueprint" || true
+        pkill -f "blueprint" >/dev/null 2>&1 || true
         sleep 1
     else
         echo -e "${YELLOW}Dibatalkan. Tunggu proses selesai lalu coba lagi.${NC}"
@@ -203,7 +227,7 @@ if [ -n "$LOCK_FILES" ]; then
     echo -e "${YELLOW}[!] Ditemukan file lock/state di $PANEL_DIR:${NC}"
     echo "$LOCK_FILES"
     if prompt_yn "Jalankan 'blueprint -unlock' dan bersihkan lockfile sisa? [y/N]: "; then
-        blueprint -unlock 2>/dev/null || true
+        blueprint -unlock >/dev/null 2>&1 || true
         while IFS= read -r lf; do
             if [ -n "$lf" ] && [ -f "$lf" ]; then
                 rm -f "$lf" && echo -e "${GREEN}[-] Dihapus: $lf${NC}"
@@ -377,4 +401,69 @@ a { color: var(--neu-accent); }
 }
 .skin-blue .sidebar-menu > li > a { color: var(--neu-muted); border: 0; }
 .skin-blue .sidebar-menu > li.active > a,
-.skin-blue .sidebar-menu >
+.skin-blue .sidebar-menu > li:hover > a {
+  background: var(--neu-bg) !important;
+  color: var(--neu-accent) !important;
+  box-shadow: var(--neu-inset);
+  border-radius: 12px;
+}
+.skin-blue .sidebar-menu > li.header { background: transparent; color: var(--neu-muted); }
+
+.box, .info-box, .small-box, .nav-tabs-custom, .modal-content {
+  background: var(--neu-bg) !important;
+  border: 0 !important;
+  border-radius: var(--neu-radius);
+  box-shadow: var(--neu-raised);
+  color: var(--neu-text);
+}
+.box-header, .box-footer, .modal-header, .modal-footer {
+  background: transparent !important;
+  border-color: var(--neu-dark) !important;
+}
+.box.box-primary, .box.box-info, .box.box-danger, .box.box-warning, .box.box-success { border-top: 0 !important; }
+
+.table > thead > tr > th,
+.table > tbody > tr > td { border-color: var(--neu-dark) !important; color: var(--neu-text); }
+.table-hover > tbody > tr:hover, .table-striped > tbody > tr:nth-of-type(odd) { background: var(--neu-light) !important; }
+
+.form-control, select.form-control, textarea.form-control, .input-group-addon, .select2-selection {
+  background: var(--neu-bg) !important;
+  color: var(--neu-text) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--neu-inset) !important;
+}
+.form-control:focus { outline: 2px solid var(--neu-accent); outline-offset: 2px; }
+
+.btn {
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--neu-raised-sm);
+  transition: box-shadow .15s ease;
+}
+.btn:active, .btn.active { box-shadow: var(--neu-inset) !important; }
+.btn-default { background: var(--neu-bg); color: var(--neu-text); }
+
+.nav-tabs-custom > .nav-tabs > li.active > a { background: var(--neu-bg); color: var(--neu-accent); }
+.callout { border-radius: var(--neu-radius); border: 0 !important; box-shadow: var(--neu-raised-sm); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+EOF_ADMIN_CSS
+
+PKG_PATH="$PANEL_DIR/$EXT_ID.blueprint"
+echo -e "${YELLOW}[+] Membuat paket ekstensi...${NC}"
+if ! (cd "$WORK" && zip -qr "$PKG_PATH" conf.yml view.blade.php dashboard.css admin.css); then
+    echo -e "${RED}[!] Gagal membuat paket.${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}[+] Menginstall via Blueprint...${NC}"
+if blueprint -install "$EXT_ID"; then
+    rm -f "$PKG_PATH"
+    php artisan view:clear >/dev/null 2>&1 || true
+    php artisan cache:clear >/dev/null 2>&1 || true
+    systemctl reload nginx 2>/dev/null || service nginx reload 2>/dev/null || true
+    echo -e "${GREEN}[✓] Neumorphism terinstall. Hard refresh browser (Ctrl+Shift+R).${NC}"
+else
+    echo -e "${RED}[!] Install gagal. Cek pesan error di atas (paket tersimpan di $PKG_PATH).${NC}"
+fi
