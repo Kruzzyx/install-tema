@@ -7,6 +7,20 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 PANEL_DIR="${PANEL_DIR:-/var/www/pterodactyl}"
 EXT_ID="neumorphism"
 
+prompt_yn() {
+    local msg="$1"
+    local ans=""
+    if [ -r /dev/tty ]; then
+        read -rp "$msg" ans </dev/tty
+    else
+        read -rp "$msg" ans
+    fi
+    case "$ans" in
+        [yY]|[yY][eE][sS]) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 [ "$EUID" -ne 0 ] && { echo -e "${RED}Jalankan sebagai root (sudo su)${NC}"; exit 1; }
 [ -d "$PANEL_DIR" ] || { echo -e "${RED}[!] Panel tidak ditemukan di $PANEL_DIR${NC}"; exit 1; }
 
@@ -24,16 +38,12 @@ if [ "$1" == "--remove" ]; then
         echo -e "${RED}[!] Blueprint tidak ditemukan, ekstensi tidak bisa dihapus lewat Blueprint.${NC}"
         exit 1
     fi
-    read -rp "Yakin ingin menghapus tema Neumorphism? [y/N]: " RM_ANS
-    case "$RM_ANS" in
-        [yY]|[yY][eE][sS])
-            blueprint -remove "$EXT_ID" && echo -e "${GREEN}[✓] Neumorphism dihapus.${NC}" \
-                || echo -e "${RED}[!] Gagal menghapus.${NC}"
-            ;;
-        *)
-            echo -e "${YELLOW}Penghapusan dibatalkan.${NC}"
-            ;;
-    esac
+    if prompt_yn "Yakin ingin menghapus tema Neumorphism? [y/N]: "; then
+        blueprint -remove "$EXT_ID" && echo -e "${GREEN}[✓] Neumorphism dihapus.${NC}" \
+            || echo -e "${RED}[!] Gagal menghapus.${NC}"
+    else
+        echo -e "${YELLOW}Penghapusan dibatalkan.${NC}"
+    fi
     exit
 fi
 
@@ -57,28 +67,20 @@ ensure_node_22() {
 
     if [ -z "$cur_major" ] || [ "$cur_major" -lt 22 ]; then
         echo -e "${RED}[!] Node.js saat ini: $(node -v 2>/dev/null || echo 'belum terinstall'). Blueprint membutuhkan Node.js v22.x+.${NC}"
-        read -rp "Install/upgrade Node.js ke v22.x dan pastikan Yarn terinstall sekarang? [y/N]: " NODE_ANS
-        case "$NODE_ANS" in
-            [yY]|[yY][eE][sS])
-                install_node_22_and_yarn || return 1
-                ;;
-            *)
-                echo -e "${YELLOW}Instalasi dibatalkan karena Node.js belum memenuhi syarat (>= v22.x).${NC}"
-                return 1
-                ;;
-        esac
+        if prompt_yn "Install/upgrade Node.js ke v22.x dan pastikan Yarn terinstall sekarang? [y/N]: "; then
+            install_node_22_and_yarn || return 1
+        else
+            echo -e "${YELLOW}Instalasi dibatalkan karena Node.js belum memenuhi syarat (>= v22.x).${NC}"
+            return 1
+        fi
     else
         if ! command -v yarn &>/dev/null; then
-            read -rp "Yarn belum terinstall. Install Yarn global via npm sekarang? [y/N]: " YARN_ANS
-            case "$YARN_ANS" in
-                [yY]|[yY][eE][sS])
-                    npm install -g yarn || return 1
-                    ;;
-                *)
-                    echo -e "${RED}[!] Yarn dibutuhkan oleh Blueprint.${NC}"
-                    return 1
-                    ;;
-            esac
+            if prompt_yn "Yarn belum terinstall. Install Yarn global via npm sekarang? [y/N]: "; then
+                npm install -g yarn || return 1
+            else
+                echo -e "${RED}[!] Yarn dibutuhkan oleh Blueprint.${NC}"
+                return 1
+            fi
         fi
     fi
     return 0
@@ -143,61 +145,71 @@ install_blueprint_auto() {
 if ! command -v blueprint &>/dev/null; then
     echo -e "${RED}[!] Blueprint belum terinstall.${NC}"
     echo -e "${YELLOW}Auto-install akan mengunduh paket dari GitHub, menginstall dependensi (Node.js v22.x, Yarn, curl, unzip, git), dan memodifikasi folder panel di $PANEL_DIR.${NC}"
-    read -rp "Lanjutkan auto-install Blueprint sekarang? [y/N]: " BP_ANS
-    case "$BP_ANS" in
-        [yY]|[yY][eE][sS])
-            install_blueprint_auto || exit 1
-            ;;
-        *)
-            echo -e "${YELLOW}Install Blueprint secara manual: https://blueprint.zip/guides/admin/install${NC}"
-            exit 1
-            ;;
-    esac
+    if prompt_yn "Lanjutkan auto-install Blueprint sekarang? [y/N]: "; then
+        install_blueprint_auto || exit 1
+    else
+        echo -e "${YELLOW}Install Blueprint secara manual: https://blueprint.zip/guides/admin/install${NC}"
+        exit 1
+    fi
 else
-    # Blueprint sudah ada, tetap pastikan Node >= 22 dan yarn siap
     ensure_node_22 || exit 1
 fi
 
 # Cek dependensi frontend panel (webpack & react / node_modules)
 if [ -f "$PANEL_DIR/package.json" ] && { [ ! -d "$PANEL_DIR/node_modules/webpack" ] || [ ! -d "$PANEL_DIR/node_modules/react" ]; }; then
     echo -e "${RED}[!] Dependensi panel (webpack/react) belum lengkap di $PANEL_DIR.${NC}"
-    read -rp "Jalankan 'yarn install' di '$PANEL_DIR' sekarang? [y/N]: " YI_ANS
-    case "$YI_ANS" in
-        [yY]|[yY][eE][sS])
-            (cd "$PANEL_DIR" && yarn install) || {
-                echo -e "${RED}[!] 'yarn install' gagal.${NC}"
-                exit 1
-            }
-            ;;
-        *)
-            echo -e "${YELLOW}Instalasi dibatalkan karena dependensi panel (webpack/react) belum terinstall.${NC}"
+    if prompt_yn "Jalankan 'yarn install' di '$PANEL_DIR' sekarang? [y/N]: "; then
+        (cd "$PANEL_DIR" && yarn install) || {
+            echo -e "${RED}[!] 'yarn install' gagal.${NC}"
             exit 1
-            ;;
-    esac
+        }
+    else
+        echo -e "${YELLOW}Instalasi dibatalkan karena dependensi panel (webpack/react) belum terinstall.${NC}"
+        exit 1
+    fi
 fi
 
 if ! command -v zip &>/dev/null; then
-    read -rp "Paket 'zip' belum terinstall. Install 'zip' sekarang? [y/N]: " ZIP_ANS
-    case "$ZIP_ANS" in
-        [yY]|[yY][eE][sS])
-            apt-get update -y && apt-get install -y zip || exit 1
-            ;;
-        *)
-            echo -e "${RED}[!] Paket 'zip' dibutuhkan untuk membuat ekstensi.${NC}"
-            exit 1
-            ;;
-    esac
+    if prompt_yn "Paket 'zip' belum terinstall. Install 'zip' sekarang? [y/N]: "; then
+        apt-get update -y && apt-get install -y zip || exit 1
+    else
+        echo -e "${RED}[!] Paket 'zip' dibutuhkan untuk membuat ekstensi.${NC}"
+        exit 1
+    fi
 fi
 
-read -rp "Lanjutkan install tema Neumorphism ke '$PANEL_DIR'? [y/N]: " THEME_ANS
-case "$THEME_ANS" in
-    [yY]|[yY][eE][sS])
-        ;;
-    *)
-        echo -e "${YELLOW}Instalasi tema Neumorphism dibatalkan.${NC}"
-        exit 0
-        ;;
-esac
+if ! prompt_yn "Lanjutkan install tema Neumorphism ke '$PANEL_DIR'? [y/N]: "; then
+    echo -e "${YELLOW}Instalasi tema Neumorphism dibatalkan.${NC}"
+    exit 0
+fi
+
+# Cek proses blueprint yang menggantung
+if pgrep -f "blueprint" >/dev/null 2>&1; then
+    echo -e "${RED}[!] Proses 'blueprint' terdeteksi sedang berjalan.${NC}"
+    if prompt_yn "Hentikan proses 'blueprint' yang berjalan sekarang? [y/N]: "; then
+        pkill -f "blueprint" || true
+        sleep 1
+    else
+        echo -e "${YELLOW}Dibatalkan. Tunggu proses selesai lalu coba lagi.${NC}"
+        exit 1
+    fi
+fi
+
+# Cek dan bersihkan lockfile sisa di direktori panel
+LOCK_FILES=$(find "$PANEL_DIR" -maxdepth 2 \( -name "*lock*" -o -name ".blueprint*" \) 2>/dev/null | grep -v "node_modules" | grep -v "vendor")
+if [ -n "$LOCK_FILES" ]; then
+    echo -e "${YELLOW}[!] Ditemukan file lock/state di $PANEL_DIR:${NC}"
+    echo "$LOCK_FILES"
+    if prompt_yn "Hapus file lock tersebut jika tidak sedang dipakai? [y/N]: "; then
+        while IFS= read -r lf; do
+            if [ -n "$lf" ] && [ -f "$lf" ]; then
+                rm -f "$lf" && echo -e "${GREEN}[-] Dihapus: $lf${NC}"
+            fi
+        done <<< "$LOCK_FILES"
+    else
+        echo -e "${YELLOW}Melewati penghapusan lockfile.${NC}"
+    fi
+fi
 
 # Deteksi versi Blueprint untuk field "target"
 BP_VER=$(blueprint -v 2>/dev/null | grep -oE '(beta|alpha)-[0-9]{4}-[0-9]{2}' | head -n 1)
