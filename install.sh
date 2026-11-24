@@ -184,6 +184,7 @@ EOF
   # ---------------- TULIS CSS ----------------
   cat <<EOF > public/themes/nb.css
 /* Kruzzy Neo-Brutalism | warna: $COLOR ($LINE) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap');
 :root{
   --nb-line:$LINE; --nb-deep:$DEEP; --nb-soft:$SOFT; --nb-bg:$BG; --nb-card:$CARD; --nb-field:$FIELD;
   --nb-muted:$MUTED; --nb-link:$LINK; --nb-grad1:$GRAD1; --nb-rgb:$RGB; --nb-ink:$INK;
@@ -320,6 +321,43 @@ code,pre{background:var(--nb-field)!important;color:var(--nb-line)!important;bor
   .content-wrapper,.right-side,.main-footer{margin-left:0!important}
   .main-sidebar{transform:translate(-230px,0)!important;transition:transform .2s}
   body.sidebar-collapse .main-sidebar{transform:translate(0,0)!important;box-shadow:6px 0 0 var(--nb-deep)}
+}
+
+/* ===== TIPOGRAFI ===== */
+body,input,select,textarea,button,.form-control{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif!important;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5,h6,.box-title,#logo,#logo a,.btn,button[type="submit"],.skin-blue .sidebar-menu > li > a,.table > thead > tr > th,
+div:has(> h2):has(form) > h2{font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;letter-spacing:.01em}
+code,pre,kbd,samp{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace!important}
+
+/* ===== ADMIN : LAYOUT & SPASI ===== */
+.content-header{padding:1.25rem 1rem .25rem!important}
+.content-header > h1{font-size:1.75rem;line-height:1.2;margin:0}
+.content-header > h1 > small{display:block;margin:.35rem 0 0;font-size:.85rem;font-weight:500;line-height:1.4}
+.content-wrapper .content-header > .breadcrumb{position:static!important;float:none!important;display:inline-flex;align-items:center;
+  margin:.9rem 0 0!important;padding:.35rem .75rem!important;font-size:.78rem;background:var(--nb-card)!important;border-width:2px!important;
+  box-shadow:3px 3px 0 var(--nb-deep)!important}
+.content-wrapper .content-header > .breadcrumb > li + li:before{content:"\203A";padding:0 .45rem;color:var(--nb-muted)}
+.content{padding:1rem!important}
+.box{margin-bottom:1.25rem}
+.box-header,.box-header.with-border{position:relative;padding:1rem!important}
+.box-header .box-title{display:block;font-size:1.05rem;margin:0}
+.box-header > .box-tools{position:static!important;float:none!important;display:flex;width:100%;margin:.75rem 0 0!important}
+.box-tools form,.box-tools .input-group{display:flex!important;flex:1 1 auto;width:100%!important;float:none!important;gap:.5rem;align-items:stretch}
+.box-tools .input-group .form-control{display:block;flex:1 1 auto;min-width:0;width:auto!important;float:none!important;height:auto;padding:.5rem .75rem}
+.box-tools .input-group-btn{display:flex!important;width:auto!important;gap:.5rem;white-space:nowrap}
+.box-tools .input-group-btn > .btn,.box-tools > .btn{float:none;margin:0!important;border-radius:5px!important;padding:.5rem .85rem}
+.table-responsive{border:0!important;box-shadow:none!important;margin:0!important;-webkit-overflow-scrolling:touch}
+.table > thead > tr > th,.table > tbody > tr > td{padding:.75rem .85rem!important;vertical-align:middle!important;white-space:nowrap;font-size:.9rem}
+.table > thead > tr > th{font-size:.72rem!important;letter-spacing:.08em}
+.table > tbody > tr:nth-child(even) > td{background:rgba(var(--nb-rgb),.05)!important}
+.table-hover > tbody > tr:hover > td{background:var(--nb-field)!important}
+.table code{padding:.15rem .5rem;font-size:.8rem}
+.main-footer{padding:1rem 1.25rem!important;font-size:.8rem}
+.main-footer a{color:var(--nb-link)!important;font-weight:600}
+@media (min-width:768px){
+  .content-header{padding:1.5rem 1.5rem .25rem!important}
+  .content{padding:1.25rem 1.5rem!important}
+  .box-header > .box-tools{position:absolute!important;right:1rem;top:.75rem;width:auto;max-width:440px;margin:0!important}
 }
 EOF
 
