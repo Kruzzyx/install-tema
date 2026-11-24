@@ -10,7 +10,7 @@
 set -e
 ORIG="$PWD"
 PANEL="${PANEL:-/var/www/pterodactyl}"
-ICON_URL="${ICON_URL:-https://github.com/GANTI-USERNAME/GANTI-REPO/blob/main/icon.png}"
+ICON_URL="${ICON_URL:-https://raw.githubusercontent.com/Kruzzyx/install-tema/refs/heads/main/icon.png}"
 TS=$(date +%s)
 
 [ -d "$PANEL" ] || { echo "Folder panel tidak ditemukan: $PANEL"; exit 1; }
