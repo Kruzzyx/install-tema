@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#  Kruzzy Neo-Brutalism Theme untuk Pterodactyl (v2)
+#  Kruzzy Neo-Brutalism Theme untuk Pterodactyl (v2.1 - layout fix)
 #  Pakai : bash nb-install.sh                 (menu interaktif)
 #          bash nb-install.sh gambar.png biru (langsung install)
 #          bash nb-install.sh --reset         (hapus tema)
@@ -21,6 +21,7 @@ ADMIN=$(find resources/views/layouts -maxdepth 1 -name "admin.blade.php" | head 
 unlink_theme() {
   [ -n "$WRAP" ]  && sed -i '/themes\/nb\.css/d; /themes\/nb-stars\.js/d' "$WRAP"
   [ -n "$ADMIN" ] && sed -i '/themes\/nb\.css/d; /themes\/nb-stars\.js/d; /neobrutalism-admin\.css/d; /nb-falling-stars-layer/d' "$ADMIN"
+  return 0   # FIX: tanpa ini, script bisa keluar sendiri (set -e) kalau file admin/wrapper tidak ketemu
 }
 
 do_uninstall() {
@@ -366,6 +367,36 @@ code,pre,kbd,samp{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monos
   .content{padding:13px 15px!important}
   .box-header > .box-tools{position:absolute!important;right:10px;top:8px;width:auto;max-width:440px;margin:0!important}
 }
+
+/* ===== LAYOUT FIX (v2.1): jarak, anti geser, anti tabrakan. Hanya tambahan, tidak mengubah aturan di atas ===== */
+
+/* 1. Bayangan kartu yang keluar layar bikin halaman bisa digeser ke samping (HP) */
+body{overflow-x:hidden}
+
+/* 2. Daftar server: jarak antar kartu dilebarkan supaya bayangan 5px tidak nempel kartu bawahnya */
+a[class*="ServerRow"] + a[class*="ServerRow"]{margin-top:1rem!important}
+
+/* 3. Tab server: ruang kanan-kiri biar tab pertama/terakhir tidak mepet tepi dan bayangannya tidak terpotong */
+div[class*="SubNavigation"] > div{padding-right:1rem;padding-bottom:.55rem}
+
+/* 4. Login: logo bawaan (burung) jangan melar karena kotak 16:9 */
+div:has(> h2):has(form) form img{object-fit:contain;background:var(--nb-field);padding:.4rem}
+
+/* 5. Admin HP: judul "Kruzzy Cpanel" jangan menabrak tombol menu kanan */
+@media (max-width:767px){
+  .main-header .navbar::before{left:56px;transform:none;font-size:17px;max-width:calc(100% - 56px - 150px);
+    overflow:hidden;text-overflow:ellipsis}
+}
+
+/* 6. Admin desktop: judul box jangan tertimpa kotak pencarian (box-tools melayang di kanan) */
+@media (min-width:768px){
+  .box-header:has(> .box-tools){min-height:54px}
+  .box-header:has(> .box-tools) .box-title{max-width:calc(100% - 460px)}
+}
+
+/* 7. Admin: tabel/box yang lebar scroll di dalam box, bukan melebarkan halaman */
+.box,.nav-tabs-custom{max-width:100%}
+.content{overflow-x:hidden}
 EOF
 
   if [ -n "$IMG_SRC" ]; then
