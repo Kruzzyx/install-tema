@@ -84,10 +84,18 @@ do_install() {
     http://*|https://*)
       URL="$IMG"
       URL=$(echo "$URL" | sed -E 's#https://github\.com/([^/]+)/([^/]+)/(blob|raw)/#https://raw.githubusercontent.com/\1/\2/#')
-      if curl -fsSL "$URL" -o public/themes/icon.png 2>/dev/null; then
+      case "$URL" in *GANTI-USERNAME*) echo "PERINGATAN: ICON_URL masih placeholder, isi dengan link icon.png GitHub kamu." ;; esac
+      if curl -fSL "$URL" -o public/themes/icon.tmp && [ -s public/themes/icon.tmp ]; then
+        mv -f public/themes/icon.tmp public/themes/icon.png
+        IMG_SRC="/themes/icon.png?v=$TS"
+      elif [ -s public/themes/icon.png ]; then
+        rm -f public/themes/icon.tmp
+        echo "Download gagal, memakai $PANEL/public/themes/icon.png yang sudah ada."
         IMG_SRC="/themes/icon.png?v=$TS"
       else
-        echo "PERINGATAN: gagal download icon dari $URL (cek link/ICON_URL). Logo bawaan dipakai."
+        rm -f public/themes/icon.tmp
+        echo "PERINGATAN: gagal download icon dari $URL. Logo bawaan dipakai."
+        echo "            Taruh icon.png manual di $PANEL/public/themes/ lalu install ulang."
       fi ;;
     *)
       FILE=""
