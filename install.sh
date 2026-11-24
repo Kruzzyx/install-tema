@@ -11,6 +11,7 @@ set -e
 ORIG="$PWD"
 PANEL="${PANEL:-/var/www/pterodactyl}"
 ICON_URL="${ICON_URL:-https://raw.githubusercontent.com/Kruzzyx/install-tema/refs/heads/main/icon.png}"
+ICON_FALLBACK="${ICON_FALLBACK:-https://i.ibb.co/9kFpXnd7/file-00000000a94082119554b15e6905fcd9.png}"
 TS=$(date +%s)
 
 [ -d "$PANEL" ] || { echo "Folder panel tidak ditemukan: $PANEL"; exit 1; }
@@ -82,20 +83,28 @@ do_install() {
   IMG_SRC=""
   case "$IMG" in
     http://*|https://*)
-      URL="$IMG"
-      URL=$(echo "$URL" | sed -E 's#https://github\.com/([^/]+)/([^/]+)/(blob|raw)/#https://raw.githubusercontent.com/\1/\2/#')
-      case "$URL" in *GANTI-USERNAME*) echo "PERINGATAN: ICON_URL masih placeholder, isi dengan link icon.png GitHub kamu." ;; esac
-      if curl -fSL "$URL" -o public/themes/icon.tmp && [ -s public/themes/icon.tmp ]; then
-        mv -f public/themes/icon.tmp public/themes/icon.png
-        IMG_SRC="/themes/icon.png?v=$TS"
-      elif [ -s public/themes/icon.png ]; then
+      URL=$(echo "$IMG" | sed -E 's#https://github\.com/([^/]+)/([^/]+)/(blob|raw)/#https://raw.githubusercontent.com/\1/\2/#')
+      is_img() { [ -s "$1" ] && file -b --mime-type "$1" 2>/dev/null | grep -q '^image/'; }
+      GOT=0
+      for U in "$URL" "$ICON_FALLBACK"; do
+        [ -z "$U" ] && continue
         rm -f public/themes/icon.tmp
-        echo "Download gagal, memakai $PANEL/public/themes/icon.png yang sudah ada."
-        IMG_SRC="/themes/icon.png?v=$TS"
-      else
-        rm -f public/themes/icon.tmp
-        echo "PERINGATAN: gagal download icon dari $URL. Logo bawaan dipakai."
-        echo "            Taruh icon.png manual di $PANEL/public/themes/ lalu install ulang."
+        if curl -fsSL "$U" -o public/themes/icon.tmp 2>/dev/null && is_img public/themes/icon.tmp; then
+          mv -f public/themes/icon.tmp public/themes/icon.png
+          echo "Icon berhasil diunduh dari: $U"
+          IMG_SRC="/themes/icon.png?v=$TS"; GOT=1; break
+        fi
+        echo "Gagal/bukan gambar valid: $U"
+      done
+      rm -f public/themes/icon.tmp
+      if [ "$GOT" = "0" ]; then
+        if is_img public/themes/icon.png; then
+          echo "Memakai icon.png yang sudah ada di $PANEL/public/themes/"
+          IMG_SRC="/themes/icon.png?v=$TS"
+        else
+          rm -f public/themes/icon.png
+          echo "PERINGATAN: icon tidak berhasil diambil. Logo bawaan dipakai."
+        fi
       fi ;;
     *)
       FILE=""
