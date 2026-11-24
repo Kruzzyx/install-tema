@@ -11,6 +11,7 @@ ORIG="$PWD"
 PANEL="${PANEL:-/var/www/pterodactyl}"
 TS=$(date +%s)
 
+
 [ -d "$PANEL" ] || { echo "Folder panel tidak ditemukan: $PANEL"; exit 1; }
 cd "$PANEL"
 mkdir -p public/themes
