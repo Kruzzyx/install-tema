@@ -329,35 +329,42 @@ h1,h2,h3,h4,h5,h6,.box-title,#logo,#logo a,.btn,button[type="submit"],.skin-blue
 div:has(> h2):has(form) > h2{font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;letter-spacing:.01em}
 code,pre,kbd,samp{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace!important}
 
-/* ===== ADMIN : LAYOUT & SPASI ===== */
-.content-header{padding:1.25rem 1rem .25rem!important}
-.content-header > h1{font-size:1.75rem;line-height:1.2;margin:0}
-.content-header > h1 > small{display:block;margin:.35rem 0 0;font-size:.85rem;font-weight:500;line-height:1.4}
+/* ===== ADMIN : LAYOUT & SPASI (px, karena html font-size admin = 10px) ===== */
+.content-wrapper{font-size:15px}
+.main-header .navbar::before{content:"Kruzzy Cpanel";position:absolute;left:50%;top:0;transform:translateX(-50%);line-height:50px;
+  font-family:'Space Grotesk','Inter',sans-serif;font-weight:700;font-size:20px;letter-spacing:.02em;color:#fff;white-space:nowrap;
+  pointer-events:none;text-shadow:0 0 14px rgba(var(--nb-rgb),.9)}
+.content-header{padding:20px 16px 4px!important}
+.content-header > h1{font-size:30px;line-height:1.2;margin:0}
+.content-header > h1 > small{display:block;margin:6px 0 0;font-size:15px;font-weight:500;line-height:1.4}
 .content-wrapper .content-header > .breadcrumb{position:static!important;float:none!important;display:inline-flex;align-items:center;
-  margin:.9rem 0 0!important;padding:.35rem .75rem!important;font-size:.78rem;background:var(--nb-card)!important;border-width:2px!important;
+  margin:14px 0 0!important;padding:6px 14px!important;font-size:14px;background:var(--nb-card)!important;border-width:2px!important;
   box-shadow:3px 3px 0 var(--nb-deep)!important}
-.content-wrapper .content-header > .breadcrumb > li + li:before{content:"\203A";padding:0 .45rem;color:var(--nb-muted)}
-.content{padding:1rem!important}
-.box{margin-bottom:1.25rem}
-.box-header,.box-header.with-border{position:relative;padding:1rem!important}
-.box-header .box-title{display:block;font-size:1.05rem;margin:0}
-.box-header > .box-tools{position:static!important;float:none!important;display:flex;width:100%;margin:.75rem 0 0!important}
-.box-tools form,.box-tools .input-group{display:flex!important;flex:1 1 auto;width:100%!important;float:none!important;gap:.5rem;align-items:stretch}
-.box-tools .input-group .form-control{display:block;flex:1 1 auto;min-width:0;width:auto!important;float:none!important;height:auto;padding:.5rem .75rem}
-.box-tools .input-group-btn{display:flex!important;width:auto!important;gap:.5rem;white-space:nowrap}
-.box-tools .input-group-btn > .btn,.box-tools > .btn{float:none;margin:0!important;border-radius:5px!important;padding:.5rem .85rem}
+.content-wrapper .content-header > .breadcrumb > li + li:before{content:"\203A";padding:0 8px;color:var(--nb-muted)}
+.content{padding:16px!important}
+.box{margin-bottom:20px}
+.box-header,.box-header.with-border{position:relative;padding:16px!important}
+.box-header .box-title{display:block;font-size:18px;margin:0}
+.box-header > .box-tools{position:static!important;float:none!important;display:flex;width:100%;margin:12px 0 0!important}
+.box-tools form,.box-tools .input-group{display:flex!important;flex:1 1 auto;width:100%!important;float:none!important;gap:8px;align-items:stretch}
+.box-tools .input-group .form-control{display:block;flex:1 1 auto;min-width:0;width:auto!important;float:none!important;height:auto;padding:10px 12px;font-size:15px}
+.box-tools .input-group-btn{display:flex!important;width:auto!important;gap:8px;white-space:nowrap}
+.box-tools .input-group-btn > .btn,.box-tools > .btn{float:none;margin:0!important;border-radius:5px!important;padding:10px 14px;font-size:15px}
 .table-responsive{border:0!important;box-shadow:none!important;margin:0!important;-webkit-overflow-scrolling:touch}
-.table > thead > tr > th,.table > tbody > tr > td{padding:.75rem .85rem!important;vertical-align:middle!important;white-space:nowrap;font-size:.9rem}
-.table > thead > tr > th{font-size:.72rem!important;letter-spacing:.08em}
+.table > thead > tr > th,.table > tbody > tr > th,.table > tbody > tr > td{padding:13px 15px!important;vertical-align:middle!important;white-space:nowrap}
+.table > tbody > tr > td{font-size:15px}
+.table > thead > tr > th,.table > tbody > tr > th{font-size:13px!important;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--nb-soft)!important}
 .table > tbody > tr:nth-child(even) > td{background:rgba(var(--nb-rgb),.05)!important}
 .table-hover > tbody > tr:hover > td{background:var(--nb-field)!important}
-.table code{padding:.15rem .5rem;font-size:.8rem}
-.main-footer{padding:1rem 1.25rem!important;font-size:.8rem}
+.table code{padding:3px 8px;font-size:13px}
+.skin-blue .sidebar-menu > li > a{font-size:15px}
+.main-footer{padding:16px 20px!important;font-size:14px}
 .main-footer a{color:var(--nb-link)!important;font-weight:600}
 @media (min-width:768px){
-  .content-header{padding:1.5rem 1.5rem .25rem!important}
-  .content{padding:1.25rem 1.5rem!important}
-  .box-header > .box-tools{position:absolute!important;right:1rem;top:.75rem;width:auto;max-width:440px;margin:0!important}
+  .main-header .navbar::before{left:70px;transform:none}
+  .content-header{padding:24px 24px 4px!important}
+  .content{padding:20px 24px!important}
+  .box-header > .box-tools{position:absolute!important;right:16px;top:12px;width:auto;max-width:440px;margin:0!important}
 }
 EOF
 
