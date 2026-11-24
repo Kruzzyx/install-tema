@@ -11,7 +11,6 @@ ORIG="$PWD"
 PANEL="${PANEL:-/var/www/pterodactyl}"
 TS=$(date +%s)
 
-
 [ -d "$PANEL" ] || { echo "Folder panel tidak ditemukan: $PANEL"; exit 1; }
 cd "$PANEL"
 mkdir -p public/themes
@@ -398,11 +397,20 @@ div:has(> h2):has(form) form img{object-fit:contain;background:var(--nb-field);p
 /* 7. Admin: tabel/box yang lebar scroll di dalam box, bukan melebarkan halaman */
 .box,.nav-tabs-custom{max-width:100%}
 .content{overflow-x:hidden}
+
+/* 8. Baris Search + tombol cari + Create New: satu baris sejajar, tinggi sama, tidak keluar layar */
+.box-header > .box-tools{flex-wrap:nowrap;align-items:stretch;gap:6px;max-width:100%}
+.box-header > .box-tools > form{flex:1 1 0;width:auto!important;min-width:0}
+.box-header > .box-tools .input-group{flex:1 1 auto;min-width:0}
+.box-header > .box-tools > .btn{flex:none;white-space:nowrap}
+.box-tools .form-control,.box-tools .input-group-btn > .btn,.box-tools > .btn{height:44px!important;box-sizing:border-box;
+  padding-top:0!important;padding-bottom:0!important;line-height:1.2}
+.box-tools .input-group-btn > .btn{min-width:46px}
 EOF
 
   if [ -n "$IMG_SRC" ]; then
     SAFE=${IMG_SRC//\"/}
-    printf '\n/* GAMBAR LOGIN */\ndiv:has(> h2):has(form) form img{content:url("%s");object-fit:contain}\n' "$SAFE" >> public/themes/nb.css
+    printf '\n/* GAMBAR LOGIN */\ndiv:has(> h2):has(form) form img{content:url("%s");aspect-ratio:auto;height:auto!important;max-height:70vh;object-fit:cover;object-position:center top;padding:0;background:none}\n' "$SAFE" >> public/themes/nb.css
   fi
 
   # ---------------- PASANG ----------------
