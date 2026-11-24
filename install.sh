@@ -5,13 +5,10 @@
 #          bash nb-install.sh gambar.png biru (langsung install)
 #          bash nb-install.sh --reset         (hapus tema)
 #  Edit  : PANEL=/path/ke/panel bash nb-install.sh
-#  GANTI ICON_URL di bawah dengan link icon.png GitHub kamu
 # ============================================================
 set -e
 ORIG="$PWD"
 PANEL="${PANEL:-/var/www/pterodactyl}"
-ICON_URL="${ICON_URL:-https://raw.githubusercontent.com/Kruzzyx/install-tema/refs/heads/main/icon.png}"
-ICON_FALLBACK="${ICON_FALLBACK:-https://i.ibb.co/9kFpXnd7/file-00000000a94082119554b15e6905fcd9.png}"
 TS=$(date +%s)
 
 [ -d "$PANEL" ] || { echo "Folder panel tidak ditemukan: $PANEL"; exit 1; }
@@ -36,9 +33,10 @@ do_uninstall() {
 do_install() {
   local IMG="$1" COLOR="$2"
   if [ -z "$IMG" ]; then
-    read -rp "Link/file icon (Enter = icon.png dari GitHub): " IMG
+    echo "Icon login: kosongkan (Enter) = pakai logo burung bawaan."
+    echo "            Atau tempel link gambar (GitHub / ImgBB / dll) / nama file lokal."
+    read -rp "Link gambar (Enter = burung bawaan): " IMG
   fi
-  IMG="${IMG:-$ICON_URL}"
   if [ -z "$COLOR" ]; then
     echo "Warna: biru, putih, merah, hijau, ungu, kuning, orange, pink, atau hex (#ff8800)"
     read -rp "Masukkan warna (default biru): " COLOR
@@ -82,28 +80,36 @@ do_install() {
   # ---------------- GAMBAR ----------------
   IMG_SRC=""
   case "$IMG" in
+    "") ;;   # kosong: logo burung bawaan
     http://*|https://*)
       URL=$(echo "$IMG" | sed -E 's#https://github\.com/([^/]+)/([^/]+)/(blob|raw)/#https://raw.githubusercontent.com/\1/\2/#')
       is_img() { [ -s "$1" ] && file -b --mime-type "$1" 2>/dev/null | grep -q '^image/'; }
-      GOT=0
-      for U in "$URL" "$ICON_FALLBACK"; do
-        [ -z "$U" ] && continue
-        rm -f public/themes/icon.tmp
-        if curl -fsSL "$U" -o public/themes/icon.tmp 2>/dev/null && is_img public/themes/icon.tmp; then
-          mv -f public/themes/icon.tmp public/themes/icon.png
-          echo "Icon berhasil diunduh dari: $U"
-          IMG_SRC="/themes/icon.png?v=$TS"; GOT=1; break
+      TMP=public/themes/icon.tmp; rm -f "$TMP"; GOT=0
+      if curl -fsSL "$URL" -o "$TMP" 2>/dev/null; then
+        if is_img "$TMP"; then
+          GOT=1
+        else
+          # kalau link berupa halaman web, coba ambil link gambarnya (og:image)
+          OG=$(grep -oE 'property="og:image" content="[^"]+' "$TMP" 2>/dev/null | head -1 | sed 's/.*content="//')
+          if [ -n "$OG" ]; then
+            echo "Link ini halaman web, memakai gambar langsung: $OG"
+            curl -fsSL "$OG" -o "$TMP" 2>/dev/null && is_img "$TMP" && GOT=1
+          fi
         fi
-        echo "Gagal/bukan gambar valid: $U"
-      done
-      rm -f public/themes/icon.tmp
-      if [ "$GOT" = "0" ]; then
+      fi
+      if [ "$GOT" = "1" ]; then
+        mv -f "$TMP" public/themes/icon.png
+        echo "Icon berhasil diunduh dari: $URL"
+        IMG_SRC="/themes/icon.png?v=$TS"
+      else
+        rm -f "$TMP"
+        echo "PERINGATAN: $URL bukan gambar valid / tidak bisa diunduh."
         if is_img public/themes/icon.png; then
-          echo "Memakai icon.png yang sudah ada di $PANEL/public/themes/"
+          echo "            Memakai icon.png yang sudah ada di $PANEL/public/themes/"
           IMG_SRC="/themes/icon.png?v=$TS"
         else
           rm -f public/themes/icon.png
-          echo "PERINGATAN: icon tidak berhasil diambil. Logo bawaan dipakai."
+          echo "            Logo bawaan dipakai. Cek link, atau taruh icon.png manual."
         fi
       fi ;;
     *)
