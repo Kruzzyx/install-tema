@@ -249,7 +249,7 @@ div:has(> h2):has(form){background:var(--nb-card)!important;border:3px solid var
 div:has(> h2):has(form) > h2{color:#fff!important;font-weight:800!important;text-transform:uppercase;letter-spacing:.06em;text-align:center;
   padding:0 0 1rem!important;margin-bottom:1.25rem;border-bottom:3px solid var(--nb-line);text-shadow:0 0 14px rgba(var(--nb-rgb),.8)}
 div:has(> h2):has(form) form > div{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important}
-div:has(> h2):has(form) form img{display:block;width:100%;max-width:100%;height:auto;margin:0 0 1.25rem;border:3px solid var(--nb-line);
+div:has(> h2):has(form) form img{display:block;width:100%!important;max-width:100%!important;height:auto!important;aspect-ratio:16/9;margin:0 0 1.25rem;border:3px solid var(--nb-line);
   border-radius:6px;box-shadow:4px 4px 0 var(--nb-deep),0 0 18px rgba(var(--nb-rgb),.45)}
 div:has(> h2):has(form) label{color:var(--nb-muted)!important;font-size:.72rem!important;font-weight:800!important;letter-spacing:.08em;text-transform:uppercase}
 div:has(> h2):has(form) form a{color:var(--nb-link)!important;font-weight:700}
