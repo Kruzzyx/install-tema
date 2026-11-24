@@ -1,15 +1,16 @@
 #!/bin/bash
 # ============================================================
 #  Kruzzy Neo-Brutalism Theme untuk Pterodactyl
-#  Pakai : bash nb-install.sh                 (interaktif)
-#          bash nb-install.sh gambar.png biru (langsung)
-#          bash nb-install.sh --reset         (kembalikan ke default)
+#  Pakai : bash <(curl -fsSL https://raw.githubusercontent.com/Kruzzyx/install-tema/refs/heads/main/install.sh)
+#          bash nb-install.sh gambar.png biru   (langsung)
+#          bash nb-install.sh --reset           (kembalikan ke default)
 #  Edit  : PANEL=/path/ke/panel bash nb-install.sh
 # ============================================================
 set -e
 ORIG="$PWD"
 PANEL="${PANEL:-/var/www/pterodactyl}"
 TS=$(date +%s)
+GITHUB_ICON_URL="${GITHUB_ICON_URL:-https://raw.githubusercontent.com/Kruzzyx/install-tema/refs/heads/main/icon.png}"
 
 [ -d "$PANEL" ] || { echo "Folder panel tidak ditemukan: $PANEL"; exit 1; }
 cd "$PANEL"
@@ -19,25 +20,72 @@ WRAP=$(find resources/views/templates -maxdepth 1 -name "wrapper.blade.php" | he
 ADMIN=$(find resources/views/layouts -maxdepth 1 -name "admin.blade.php" | head -n 1)
 
 unlink_theme() {
-  [ -n "$WRAP" ]  && sed -i '/themes\/nb\.css/d' "$WRAP"
-  [ -n "$ADMIN" ] && sed -i '/themes\/nb\.css/d; /neobrutalism-admin\.css/d; /nb-falling-stars-layer/d' "$ADMIN"
+  [ -n "$WRAP" ]  && sed -i '/themes\/nb\.css/d; /themes\/nb-stars\.js/d' "$WRAP"
+  [ -n "$ADMIN" ] && sed -i '/themes\/nb\.css/d; /themes\/nb-stars\.js/d; /neobrutalism-admin\.css/d; /nb-falling-stars-layer/d' "$ADMIN"
+}
+
+reset_theme() {
+  unlink_theme
+  rm -f public/themes/nb.css public/themes/nb-stars.js
+  php artisan view:clear
+  php artisan cache:clear
+  chown -R www-data:www-data public/themes resources/views 2>/dev/null || true
+  echo "Tema dihapus. Panel kembali ke tampilan default."
 }
 
 if [ "$1" = "--reset" ]; then
-  unlink_theme; rm -f public/themes/nb.css
-  php artisan view:clear
-  echo "Tema dihapus. Panel kembali ke tampilan default."; exit 0
+  reset_theme
+  exit 0
+fi
+
+# ---------------- MENU PILIHAN (JIKA TANPA ARGUMEN) ----------------
+if [ "$#" -eq 0 ]; then
+  echo "[1] install theme neobrutalism"
+  echo "[2] uninstall theme"
+  echo "3 keluar"
+  if [ -r /dev/tty ]; then
+    read -rp "pilih salah satu output : " MENU_CHOICE < /dev/tty
+  else
+    read -rp "pilih salah satu output : " MENU_CHOICE
+  fi
+  MENU_CHOICE=$(echo "$MENU_CHOICE" | xargs)
+
+  case "$MENU_CHOICE" in
+    1)
+      ;;
+    2)
+      reset_theme
+      exit 0
+      ;;
+    3)
+      echo "Keluar."
+      exit 0
+      ;;
+    *)
+      echo "Pilihan '$MENU_CHOICE' tidak valid. Keluar."
+      exit 1
+      ;;
+  esac
 fi
 
 # ---------------- INPUT ----------------
 IMG="$1"; COLOR="$2"
 if [ -z "$IMG" ]; then
-  read -rp "Masukkan gambar (default icon.png): " IMG
+  if [ -r /dev/tty ]; then
+    read -rp "Masukkan gambar (default icon.png): " IMG < /dev/tty
+  else
+    read -rp "Masukkan gambar (default icon.png): " IMG
+  fi
 fi
 IMG="${IMG:-icon.png}"
+
 if [ -z "$COLOR" ]; then
   echo "Warna: biru, putih, merah, hijau, ungu, kuning, orange, pink, atau kode hex (contoh #ff8800)"
-  read -rp "Masukkan warna (default biru): " COLOR
+  if [ -r /dev/tty ]; then
+    read -rp "Masukkan warna (default biru): " COLOR < /dev/tty
+  else
+    read -rp "Masukkan warna (default biru): " COLOR
+  fi
 fi
 COLOR=$(echo "${COLOR:-biru}" | tr 'A-Z' 'a-z' | xargs)
 
@@ -83,15 +131,24 @@ case "$IMG" in
     FILE=""
     [ -f "$IMG" ] && FILE="$IMG"
     [ -z "$FILE" ] && [ -f "$ORIG/$IMG" ] && FILE="$ORIG/$IMG"
+    BASE=$(basename "$IMG")
     if [ -n "$FILE" ]; then
-      BASE=$(basename "$FILE")
       [ "$(realpath "$FILE")" != "$(realpath "public/themes/$BASE" 2>/dev/null || echo x)" ] && cp "$FILE" "public/themes/$BASE"
       IMG_SRC="/themes/$BASE?v=$TS"
-    elif [ -f "public/themes/$(basename "$IMG")" ]; then
-      IMG_SRC="/themes/$(basename "$IMG")?v=$TS"
+    elif [ -f "public/themes/$BASE" ]; then
+      IMG_SRC="/themes/$BASE?v=$TS"
     else
-      echo "PERINGATAN: gambar '$IMG' tidak ditemukan."
-      echo "            Taruh di $PANEL/public/themes/ lalu jalankan ulang. Sementara logo bawaan dipakai."
+      DL_URL="$GITHUB_ICON_URL"
+      if [ "$BASE" != "icon.png" ]; then
+        DL_URL="https://raw.githubusercontent.com/Kruzzyx/install-tema/refs/heads/main/$BASE"
+      fi
+      if command -v curl >/dev/null 2>&1 && curl -fsSL "$DL_URL" -o "public/themes/$BASE" && [ -s "public/themes/$BASE" ]; then
+        IMG_SRC="/themes/$BASE?v=$TS"
+      else
+        rm -f "public/themes/$BASE"
+        echo "PERINGATAN: gambar '$IMG' tidak ditemukan (lokal maupun GitHub)."
+        echo "            Taruh di $PANEL/public/themes/ lalu jalankan ulang. Sementara logo bawaan dipakai."
+      fi
     fi ;;
 esac
 
@@ -116,29 +173,56 @@ cat <<EOF > public/themes/nb.css
 EOF
 
 cat <<'EOF' >> public/themes/nb.css
-/* ===== GLOBAL ===== */
-html,body{background-color:var(--nb-bg)!important;color:#fff;
+/* ===== GLOBAL & BINTANG JATUH ===== */
+html,body{background-color:var(--nb-bg)!important;color:#fff;overflow-x:hidden;
   background-image:radial-gradient(rgba(var(--nb-rgb),.14) 1px,transparent 1px),radial-gradient(ellipse at 50% 0%,rgba(var(--nb-rgb),.22),transparent 55%);
   background-size:22px 22px,100% 100%}
-#app{background:transparent!important}
+#app{position:relative;z-index:1;background:transparent!important}
 ::selection{background:var(--nb-line);color:#02050f}
 
-/* ===== PANEL : NAVBAR ===== */
+#nb-starfield{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.nb-meteor{position:absolute;top:-12%;left:var(--x,50%);width:2.5px;height:85px;
+  background:linear-gradient(180deg,rgba(255,255,255,0),var(--nb-soft),var(--nb-line));
+  border-radius:999px;filter:drop-shadow(0 0 8px rgba(var(--nb-rgb),.85));
+  opacity:0;transform:rotate(-35deg) translate3d(0,0,0);
+  animation:nb-meteor-fall var(--dur,3.6s) linear var(--delay,0s) infinite}
+.nb-meteor::after{content:"";position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
+  width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 10px var(--nb-line),0 0 18px var(--nb-soft)}
+@keyframes nb-meteor-fall{
+  0%{opacity:0;transform:rotate(-35deg) translate3d(0,0,0)}
+  10%{opacity:.95}
+  75%{opacity:.85}
+  100%{opacity:0;transform:rotate(-35deg) translate3d(0,115vh,0)}
+}
+
+/* ===== PANEL : NAVBAR & GESER KIRI-KANAN RESPONSIF ===== */
 div[class*="NavigationBar"]{background:var(--nb-card)!important;border:0!important;border-bottom:3px solid var(--nb-line)!important;
-  border-radius:0!important;box-shadow:0 4px 0 var(--nb-deep)!important}
+  border-radius:0!important;box-shadow:0 4px 0 var(--nb-deep)!important;position:relative;z-index:20}
 div[class*="NavigationBar"] div[class*="NavigationBar"]{border:0!important;box-shadow:none!important;background:transparent!important}
-#logo,#logo a{background:transparent!important;color:#fff!important;font-weight:800;text-shadow:0 0 12px rgba(var(--nb-rgb),.8)}
+#logo,#logo a{background:transparent!important;color:#fff!important;font-weight:800;text-shadow:0 0 12px rgba(var(--nb-rgb),.8);white-space:nowrap;flex-shrink:0}
 div[class*="NavigationBar"] a,div[class*="NavigationBar"] button{color:#fff!important;background:transparent!important;
-  border:3px solid transparent!important;border-radius:6px!important;box-shadow:none!important}
+  border:3px solid transparent!important;border-radius:6px!important;box-shadow:none!important;flex-shrink:0;white-space:nowrap}
 div[class*="NavigationBar"] a:hover,div[class*="NavigationBar"] button:hover{background:var(--nb-field)!important;border-color:var(--nb-line)!important}
 div[class*="NavigationBar"] a.active,div[class*="NavigationBar"] a[aria-current="page"]{background:var(--nb-line)!important;color:#02050f!important;
   border-color:var(--nb-soft)!important;box-shadow:3px 3px 0 var(--nb-deep)!important}
 
+@media (max-width:767px){
+  div[class*="NavigationBar"] > div{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+    align-items:center!important;gap:.45rem!important;overflow-x:auto!important;overflow-y:visible!important;
+    -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding:.45rem .6rem .55rem!important;scrollbar-width:none}
+  div[class*="NavigationBar"] > div::-webkit-scrollbar{display:none}
+  div[class*="NavigationBar"] a,div[class*="NavigationBar"] button{min-width:2.65rem;height:2.5rem;
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;
+    padding:0 .65rem!important;scroll-snap-align:start}
+}
+
 /* ===== PANEL : TAB SERVER (SubNavigation) ===== */
 div[class*="SubNavigation"]{background:transparent!important;box-shadow:none!important;border:0!important}
-div[class*="SubNavigation"] > div{display:flex;gap:.5rem;padding:.8rem .75rem .3rem;overflow-x:auto;scrollbar-width:none}
+div[class*="SubNavigation"] > div{display:flex;gap:.5rem;padding:.8rem .75rem .3rem;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none}
+div[class*="SubNavigation"] > div::-webkit-scrollbar{display:none}
 div[class*="SubNavigation"] a{flex:none;padding:.5rem .9rem!important;margin:0!important;background:var(--nb-card)!important;color:var(--nb-soft)!important;
-  font-weight:700;border:3px solid var(--nb-line)!important;border-radius:6px!important;box-shadow:none!important}
+  font-weight:700;border:3px solid var(--nb-line)!important;border-radius:6px!important;box-shadow:none!important;scroll-snap-align:start}
 div[class*="SubNavigation"] a.active,div[class*="SubNavigation"] a[aria-current="page"]{background:var(--nb-line)!important;color:#02050f!important;
   border-color:var(--nb-soft)!important;box-shadow:3px 3px 0 var(--nb-deep)!important;font-weight:800}
 
@@ -247,9 +331,30 @@ if [ -n "$IMG_SRC" ]; then
   printf '\n/* GAMBAR LOGIN */\ndiv:has(> h2):has(form) form img{content:url("%s");object-fit:contain}\n' "$SAFE" >> public/themes/nb.css
 fi
 
+# ---------------- SCRIPT BINTANG JATUH ----------------
+cat <<'EOF' > public/themes/nb-stars.js
+(function(){
+  if (document.getElementById('nb-starfield')) return;
+  const layer = document.createElement('div');
+  layer.id = 'nb-starfield';
+  layer.setAttribute('aria-hidden', 'true');
+  const count = window.innerWidth < 768 ? 7 : 12;
+  for (let i = 0; i < count; i++) {
+    const m = document.createElement('span');
+    m.className = 'nb-meteor';
+    m.style.setProperty('--x', (8 + ((i * 83) % 86)) + '%');
+    m.style.setProperty('--dur', (2.8 + (i % 4) * 0.75) + 's');
+    m.style.setProperty('--delay', ((i * 0.65) % 4.2).toFixed(2) + 's');
+    layer.appendChild(m);
+  }
+  document.body.prepend(layer);
+})();
+EOF
+
 # ---------------- PASANG LINK ----------------
 unlink_theme
 [ -n "$WRAP" ]  && sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"/themes/nb.css?v=$TS\">" "$WRAP"
+[ -n "$WRAP" ]  && sed -i "/<\/body>/i <script src=\"/themes/nb-stars.js?v=$TS\" defer></script>" "$WRAP"
 [ -n "$ADMIN" ] && sed -i "/<\/head>/i <link rel=\"stylesheet\" href=\"/themes/nb.css?v=$TS\">" "$ADMIN"
 
 if [ "$NEED_BUILD" = "1" ]; then
@@ -262,5 +367,5 @@ php artisan view:clear
 php artisan cache:clear
 chown -R www-data:www-data public/themes resources/views 2>/dev/null || true
 echo
-echo "SELESAI. Warna: $COLOR ($LINE) | Gambar: ${IMG_SRC:-bawaan}"
+echo "SELESAI. Warna: $COLOR ($LINE) | Gambar: ${IMG_SRC:-bawaan} | Bintang jatuh: aktif"
 echo "Hard refresh browser (tarik ulang halaman). Ganti warna/gambar: jalankan script ini lagi."
