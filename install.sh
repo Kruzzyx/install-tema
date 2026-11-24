@@ -330,35 +330,36 @@ div:has(> h2):has(form) > h2{font-family:'Space Grotesk','Inter',system-ui,sans-
 code,pre,kbd,samp{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace!important}
 
 /* ===== ADMIN : LAYOUT & SPASI (px, karena html font-size admin = 10px) ===== */
-.content-wrapper{font-size:15px}
+.content-wrapper{font-size:17px}
+.content-wrapper p,.content-wrapper label,.content-wrapper .box-body,.content-wrapper .help-block,.content-wrapper .form-control,.content-wrapper select{font-size:17px}
 .main-header .navbar::before{content:"Kruzzy Cpanel";position:absolute;left:50%;top:0;transform:translateX(-50%);line-height:50px;
-  font-family:'Space Grotesk','Inter',sans-serif;font-weight:700;font-size:20px;letter-spacing:.02em;color:#fff;white-space:nowrap;
+  font-family:'Space Grotesk','Inter',sans-serif;font-weight:700;font-size:23px;letter-spacing:.02em;color:#fff;white-space:nowrap;
   pointer-events:none;text-shadow:0 0 14px rgba(var(--nb-rgb),.9)}
 .content-header{padding:20px 16px 4px!important}
-.content-header > h1{font-size:30px;line-height:1.2;margin:0}
-.content-header > h1 > small{display:block;margin:6px 0 0;font-size:15px;font-weight:500;line-height:1.4}
+.content-header > h1{font-size:34px;line-height:1.2;margin:0}
+.content-header > h1 > small{display:block;margin:6px 0 0;font-size:17px;font-weight:500;line-height:1.4}
 .content-wrapper .content-header > .breadcrumb{position:static!important;float:none!important;display:inline-flex;align-items:center;
-  margin:14px 0 0!important;padding:6px 14px!important;font-size:14px;background:var(--nb-card)!important;border-width:2px!important;
+  margin:14px 0 0!important;padding:7px 14px!important;font-size:16px;background:var(--nb-card)!important;border-width:2px!important;
   box-shadow:3px 3px 0 var(--nb-deep)!important}
 .content-wrapper .content-header > .breadcrumb > li + li:before{content:"\203A";padding:0 8px;color:var(--nb-muted)}
 .content{padding:16px!important}
 .box{margin-bottom:20px}
 .box-header,.box-header.with-border{position:relative;padding:16px!important}
-.box-header .box-title{display:block;font-size:18px;margin:0}
+.box-header .box-title{display:block;font-size:21px;margin:0}
 .box-header > .box-tools{position:static!important;float:none!important;display:flex;width:100%;margin:12px 0 0!important}
 .box-tools form,.box-tools .input-group{display:flex!important;flex:1 1 auto;width:100%!important;float:none!important;gap:8px;align-items:stretch}
-.box-tools .input-group .form-control{display:block;flex:1 1 auto;min-width:0;width:auto!important;float:none!important;height:auto;padding:10px 12px;font-size:15px}
+.box-tools .input-group .form-control{display:block;flex:1 1 auto;min-width:0;width:auto!important;float:none!important;height:auto;padding:11px 13px;font-size:17px}
 .box-tools .input-group-btn{display:flex!important;width:auto!important;gap:8px;white-space:nowrap}
-.box-tools .input-group-btn > .btn,.box-tools > .btn{float:none;margin:0!important;border-radius:5px!important;padding:10px 14px;font-size:15px}
+.box-tools .input-group-btn > .btn,.box-tools > .btn{float:none;margin:0!important;border-radius:5px!important;padding:11px 15px;font-size:16px}
 .table-responsive{border:0!important;box-shadow:none!important;margin:0!important;-webkit-overflow-scrolling:touch}
 .table > thead > tr > th,.table > tbody > tr > th,.table > tbody > tr > td{padding:13px 15px!important;vertical-align:middle!important;white-space:nowrap}
-.table > tbody > tr > td{font-size:15px}
-.table > thead > tr > th,.table > tbody > tr > th{font-size:13px!important;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--nb-soft)!important}
+.table > tbody > tr > td{font-size:17px}
+.table > thead > tr > th,.table > tbody > tr > th{font-size:14px!important;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--nb-soft)!important}
 .table > tbody > tr:nth-child(even) > td{background:rgba(var(--nb-rgb),.05)!important}
 .table-hover > tbody > tr:hover > td{background:var(--nb-field)!important}
-.table code{padding:3px 8px;font-size:13px}
-.skin-blue .sidebar-menu > li > a{font-size:15px}
-.main-footer{padding:16px 20px!important;font-size:14px}
+.table code{padding:3px 8px;font-size:14px}
+.skin-blue .sidebar-menu > li > a{font-size:17px}
+.main-footer{padding:16px 20px!important;font-size:15px}
 .main-footer a{color:var(--nb-link)!important;font-weight:600}
 @media (min-width:768px){
   .main-header .navbar::before{left:70px;transform:none}
