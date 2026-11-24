@@ -384,8 +384,7 @@ div:has(> h2):has(form) form img{object-fit:contain;background:var(--nb-field);p
 
 /* 5. Admin HP: judul "Kruzzy Cpanel" jangan menabrak tombol menu kanan */
 @media (max-width:767px){
-  .main-header .navbar::before{left:56px;transform:none;font-size:17px;max-width:calc(100% - 56px - 150px);
-    overflow:hidden;text-overflow:ellipsis}
+  .main-header .navbar::before{left:56px;transform:none;font-size:18px}
 }
 
 /* 6. Admin desktop: judul box jangan tertimpa kotak pencarian (box-tools melayang di kanan) */
@@ -401,16 +400,23 @@ div:has(> h2):has(form) form img{object-fit:contain;background:var(--nb-field);p
 /* 8. Baris Search + tombol cari + Create New: satu baris sejajar, tinggi sama, tidak keluar layar */
 .box-header > .box-tools{flex-wrap:nowrap;align-items:stretch;gap:6px;max-width:100%}
 .box-header > .box-tools > form{flex:1 1 0;width:auto!important;min-width:0}
-.box-header > .box-tools .input-group{flex:1 1 auto;min-width:0}
-.box-header > .box-tools > .btn{flex:none;white-space:nowrap}
-.box-tools .form-control,.box-tools .input-group-btn > .btn,.box-tools > .btn{height:44px!important;box-sizing:border-box;
-  padding-top:0!important;padding-bottom:0!important;line-height:1.2}
-.box-tools .input-group-btn > .btn{min-width:46px}
+.box-header > .box-tools .input-group{flex:1 1 auto;min-width:0;display:flex!important;align-items:stretch}
+.box-tools .input-group-btn{display:flex!important;align-items:stretch;gap:6px;flex:none}
+.box-tools .input-group-btn > a{display:flex;align-items:stretch;text-decoration:none!important}
+.box-tools .form-control{height:44px!important;box-sizing:border-box;padding-top:0!important;padding-bottom:0!important}
+.box-tools .btn{height:44px!important;min-width:46px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+  margin:0!important;padding:0 14px!important;line-height:1;font-size:15px;white-space:nowrap;border-radius:5px!important}
+
+/* 9. Scrollbar tipis bertema (bar abu-abu tebal di dasar tabel diganti garis warna tema) */
+.box-body,.table-responsive{scrollbar-width:thin;scrollbar-color:var(--nb-line) transparent}
+.box-body::-webkit-scrollbar,.table-responsive::-webkit-scrollbar{height:6px}
+.box-body::-webkit-scrollbar-thumb,.table-responsive::-webkit-scrollbar-thumb{background:var(--nb-line);border-radius:3px}
+.box-body::-webkit-scrollbar-track,.table-responsive::-webkit-scrollbar-track{background:transparent}
 EOF
 
   if [ -n "$IMG_SRC" ]; then
     SAFE=${IMG_SRC//\"/}
-    printf '\n/* GAMBAR LOGIN */\ndiv:has(> h2):has(form) form img{content:url("%s");aspect-ratio:auto;height:auto!important;max-height:70vh;object-fit:cover;object-position:center top;padding:0;background:none}\n' "$SAFE" >> public/themes/nb.css
+    printf '\n/* GAMBAR LOGIN */\ndiv:has(> h2):has(form) form img{content:url("%s");display:block;aspect-ratio:auto;width:auto!important;max-width:100%%!important;height:auto!important;max-height:min(52vh,30rem);object-fit:contain;margin:0 auto 1.25rem;padding:0;background:none}\n' "$SAFE" >> public/themes/nb.css
   fi
 
   # ---------------- PASANG ----------------
